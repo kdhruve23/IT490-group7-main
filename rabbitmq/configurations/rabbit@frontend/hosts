@@ -1,0 +1,5 @@
+127.0.0.1 localhost
+#127.0.1.1 frontend
+10.248.179.14 frontend #change ip 
+10.248.179.10 it490 #change ip
+10.248.179.18 rp54 #change ip

@@ -1,0 +1,101 @@
+//Publish messages 2.0: PHP
+<?php
+
+require 'vendor/autoload.php'; // Include the Composer autoloader
+
+use PhpAmqpLib\Connection\AMQPStreamConnection;
+use PhpAmqpLib\Message\AMQPMessage;
+
+// RabbitMQ server connection parameters
+$rabbitMQHost = '10.248.179.6’; //if we don’t get a static ip address this has to be changed to my ip everytime
+$rabbitMQPort = 5672; // Default RabbitMQ port
+$rabbitMQUser = 'frontend';
+$rabbitMQPassword = 'password';
+$virtualHost = '/';
+
+// Exchange name
+$exchangeName = 'frontend-backend'; // Replace with the actual exchange name
+
+try {
+    // Create a connection to RabbitMQ
+    $connection = new AMQPStreamConnection($rabbitMQHost, $rabbitMQPort, $rabbitMQUser, $rabbitMQPassword, $virtualHost);
+
+    // Create a channel
+    $channel = $connection->channel();
+
+    // Declare the exchange (direct type)
+    $channel->exchange_declare($exchangeName, 'direct', false, true, false);
+
+    // Your message content
+    $messageBody = 'Hello, backend!';
+
+    // Specify the routing key for the backend queue
+    $routingKey = 'frontend';
+
+    // Create a message
+    $message = new AMQPMessage($messageBody);
+
+    // Publish the message to the exchange with the routing key
+    $channel->basic_publish($message, $exchangeName, $routingKey);
+
+    echo "Message sent to the exchange with routing key '$routingKey': $messageBody\n";
+
+    // Close the channel and the connection
+    $channel->close();
+    $connection->close();
+
+} catch (\Exception $e) {
+    echo "Error: " . $e->getMessage() . "\n";
+}
+
+
+
+//Consume messages 2.0: PHP
+
+<?php
+
+require 'vendor/autoload.php'; // Include the Composer autoloader
+
+use PhpAmqpLib\Connection\AMQPStreamConnection;
+
+// RabbitMQ server connection parameters
+$rabbitMQHost = '10.248.179.6’; //if we don’t get a static ip address this has to be changed to my ip everytime
+$rabbitMQPort = 5672; // Default RabbitMQ port
+$rabbitMQUser = 'frontend';
+$rabbitMQPassword = 'password';
+$virtualHost = '/';
+
+// Queue name (frontend-to-backend-queue)
+$queueName = 'back-front'; // Replace with the actual queue name
+
+try {
+    // Create a connection to RabbitMQ
+    $connection = new AMQPStreamConnection($rabbitMQHost, $rabbitMQPort, $rabbitMQUser, $rabbitMQPassword, $virtualHost);
+
+    // Create a channel
+    $channel = $connection->channel();
+
+    // Declare the queue
+    list($queueName) = $channel->queue_declare($queueName, false, true, false, false);
+
+    echo "Waiting for messages from the backend...\n";
+
+    // Callback function to process received messages
+    $callback = function ($message) {
+        echo 'Received: ', $message->body, "\n";
+    };
+
+    // Consume messages from the queue
+    $channel->basic_consume($queueName, '', false, true, false, false, $callback);
+
+    // Wait for messages
+    while (count($channel->callbacks)) {
+        $channel->wait();
+    }
+
+} catch (\Exception $e) {
+    echo "Error: " . $e->getMessage() . "\n";
+}
+
+Backend
+Publish messages to frontend
